@@ -81,7 +81,7 @@ function updateOpenStatus(isOpen) {
 
 // ===== SOCKET =====
 function connectSocket(restaurantId) {
-  const socket = io('http://localhost:5000');
+ const socket = io('https://chowfast-backend-production.up.railway.app');
   socket.emit('restaurant:join', restaurantId);
 
   socket.on('order:new', (order) => {
