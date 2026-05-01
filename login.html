@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Restaurant Login — ChowFast</title>
+  <link rel="stylesheet" href="../shared/base.css" />
+  <style>
+    .auth-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; background: radial-gradient(ellipse at bottom left, rgba(255,69,0,0.07) 0%, transparent 60%); }
+    .auth-card { width: 100%; max-width: 440px; background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 40px; }
+    .auth-logo { font-family: var(--font-display); font-size: 1.8rem; font-weight: 700; text-align: center; margin-bottom: 4px; }
+    .rest-tag { text-align: center; background: rgba(255,69,0,0.1); border: 1px solid rgba(255,69,0,0.2); color: var(--brand); font-size: 0.8rem; font-weight: 600; padding: 4px 12px; border-radius: 100px; display: inline-block; margin: 0 auto 28px; }
+    .auth-center { text-align: center; margin-bottom: 28px; }
+    .auth-tabs { display: flex; background: var(--dark-3); border-radius: var(--radius-sm); padding: 4px; margin-bottom: 28px; }
+    .auth-tab { flex: 1; padding: 10px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; color: var(--text-muted); background: none; transition: all 0.2s; cursor: pointer; border: none; }
+    .auth-tab.active { background: var(--brand); color: white; }
+    .auth-form-panel { display: none; flex-direction: column; gap: 16px; }
+    .auth-form-panel.active { display: flex; }
+    .error-msg { color: var(--red); font-size: 0.85rem; background: rgba(255,61,61,0.08); border: 1px solid rgba(255,61,61,0.2); border-radius: 8px; padding: 10px 14px; display: none; }
+    .back-link { text-align: center; margin-top: 16px; font-size: 0.85rem; color: var(--text-muted); }
+    .back-link a { color: var(--brand); font-weight: 600; }
+  </style>
+</head>
+<body>
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-logo">🍽️ ChowFast</div>
+    <div class="auth-center"><span class="rest-tag">Restaurant Portal</span></div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchTab('login')">Sign In</button>
+      <button class="auth-tab" onclick="switchTab('register')">Register</button>
+    </div>
+
+    <div id="errorMsg" class="error-msg"></div>
+
+    <div class="auth-form-panel active" id="loginPanel">
+      <div class="input-group"><label>Email address</label><input class="input" type="email" id="loginEmail" placeholder="restaurant@example.com" /></div>
+      <div class="input-group"><label>Password</label><input class="input" type="password" id="loginPassword" placeholder="••••••••" /></div>
+      <button class="btn btn-primary btn-lg btn-full" onclick="handleLogin()">Sign In</button>
+    </div>
+
+    <div class="auth-form-panel" id="registerPanel">
+      <div class="input-group"><label>Restaurant name</label><input class="input" type="text" id="regName" placeholder="Mama's Kitchen" /></div>
+      <div class="input-group"><label>Email address</label><input class="input" type="email" id="regEmail" placeholder="restaurant@example.com" /></div>
+      <div class="input-group"><label>Phone number</label><input class="input" type="tel" id="regPhone" placeholder="08012345678" /></div>
+      <div class="input-group"><label>Street address</label><input class="input" type="text" id="regStreet" placeholder="5 Wuse Market Road" /></div>
+      <div class="input-group"><label>City</label><input class="input" type="text" id="regCity" placeholder="Abuja" /></div>
+      <div class="input-group"><label>Cuisine types (comma separated)</label><input class="input" type="text" id="regCuisine" placeholder="Nigerian, Grills, Soups" /></div>
+      <div class="input-group"><label>Password</label><input class="input" type="password" id="regPassword" placeholder="At least 6 characters" /></div>
+      <button class="btn btn-primary btn-lg btn-full" onclick="handleRegister()">Create Restaurant</button>
+    </div>
+
+    <div class="back-link"><a href="../user/index.html">← Back to ChowFast</a></div>
+  </div>
+</div>
+
+<script src="../shared/api.js"></script>
+<script>
+  if (localStorage.getItem('cf_rest_token')) window.location.href = 'dashboard.html';
+
+  function switchTab(tab) {
+    document.querySelectorAll('.auth-tab').forEach((t, i) => {
+      t.classList.toggle('active', (i === 0 && tab === 'login') || (i === 1 && tab === 'register'));
+    });
+    document.getElementById('loginPanel').classList.toggle('active', tab === 'login');
+    document.getElementById('registerPanel').classList.toggle('active', tab === 'register');
+    document.getElementById('errorMsg').style.display = 'none';
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('errorMsg');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  async function handleLogin() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    if (!email || !password) return showError('Please fill in all fields');
+    try {
+      const data = await api.post('/auth/restaurant/login', { email, password });
+      localStorage.setItem('cf_rest_token', data.token);
+      localStorage.setItem('cf_rest', JSON.stringify(data.restaurant));
+      window.location.href = 'dashboard.html';
+    } catch (err) { showError(err.message); }
+  }
+
+  async function handleRegister() {
+    const name = document.getElementById('regName').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+    const phone = document.getElementById('regPhone').value.trim();
+    const street = document.getElementById('regStreet').value.trim();
+    const city = document.getElementById('regCity').value.trim();
+    const cuisineRaw = document.getElementById('regCuisine').value;
+    const cuisine = cuisineRaw.split(',').map(c => c.trim()).filter(Boolean);
+    const password = document.getElementById('regPassword').value;
+    if (!name || !email || !phone || !password) return showError('Please fill in all fields');
+    try {
+      const data = await api.post('/auth/restaurant/register', {
+        name, email, phone, password,
+        address: { street, city },
+        cuisine
+      });
+      localStorage.setItem('cf_rest_token', data.token);
+      localStorage.setItem('cf_rest', JSON.stringify(data.restaurant));
+      window.location.href = 'dashboard.html';
+    } catch (err) { showError(err.message); }
+  }
+</script>
+</body>
+</html>

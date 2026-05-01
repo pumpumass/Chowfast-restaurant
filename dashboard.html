@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Restaurant Dashboard — ChowFast</title>
+  <link rel="stylesheet" href="../shared/base.css" />
+  <link rel="stylesheet" href="css/dashboard.css" />
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="dashboard-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">🍽️ <span>ChowFast</span></div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" onclick="showTab('orders')">📋 Orders</button>
+      <button class="nav-item" onclick="showTab('menu')">🍔 Menu</button>
+      <button class="nav-item" onclick="showTab('stats')">📊 Stats</button>
+      <button class="nav-item" onclick="showTab('settings')">⚙️ Settings</button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="rest-info">
+        <div class="rest-avatar">🍽️</div>
+        <div>
+          <div class="rest-name" id="sidebarRestName">Restaurant</div>
+          <div class="rest-status-wrap">
+            <div class="rest-status-dot" id="restStatusDot"></div>
+            <span id="restStatusText" style="font-size:0.75rem;color:var(--text-muted)">Loading...</span>
+          </div>
+        </div>
+      </div>
+      <button class="toggle-open-btn" id="toggleOpenBtn" onclick="toggleRestaurantOpen()">Toggle Open/Closed</button>
+      <button class="btn btn-ghost btn-sm btn-full" onclick="logout()" style="margin-top:8px">Logout</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="dashboard-main">
+
+    <!-- ===== ORDERS TAB ===== -->
+    <div class="tab-panel active" id="tab-orders">
+      <div class="dash-header">
+        <h1 class="dash-title">Orders</h1>
+        <div class="order-filters" id="orderFilters">
+          <button class="filter-btn active" data-status="">All</button>
+          <button class="filter-btn" data-status="pending">Pending</button>
+          <button class="filter-btn" data-status="confirmed">Confirmed</button>
+          <button class="filter-btn" data-status="preparing">Preparing</button>
+          <button class="filter-btn" data-status="ready">Ready</button>
+          <button class="filter-btn" data-status="delivered">Delivered</button>
+        </div>
+      </div>
+      <div id="ordersList"></div>
+    </div>
+
+    <!-- ===== MENU TAB ===== -->
+    <div class="tab-panel" id="tab-menu">
+      <div class="dash-header">
+        <h1 class="dash-title">Menu</h1>
+        <button class="btn btn-primary" onclick="openAddItemModal()">+ Add Item</button>
+      </div>
+      <div id="menuList"></div>
+    </div>
+
+    <!-- ===== STATS TAB ===== -->
+    <div class="tab-panel" id="tab-stats">
+      <div class="dash-header"><h1 class="dash-title">Stats</h1></div>
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card-big"><div class="stat-big-val" id="sTotalOrders">—</div><div class="stat-big-lbl">Total Orders Delivered</div></div>
+        <div class="stat-card-big"><div class="stat-big-val" id="sTodayOrders">—</div><div class="stat-big-lbl">Orders Today</div></div>
+        <div class="stat-card-big"><div class="stat-big-val" id="sRevenue">—</div><div class="stat-big-lbl">Total Revenue</div></div>
+      </div>
+    </div>
+
+    <!-- ===== SETTINGS TAB ===== -->
+    <div class="tab-panel" id="tab-settings">
+      <div class="dash-header"><h1 class="dash-title">Settings</h1></div>
+      <div class="settings-form" id="settingsForm">
+        <div class="settings-section">
+          <div class="settings-section-title">Restaurant Info</div>
+          <div class="input-group"><label>Restaurant name</label><input class="input" type="text" id="setName" /></div>
+          <div class="input-group"><label>Description</label><textarea class="input" id="setDesc" rows="3" style="resize:none"></textarea></div>
+          <div class="input-group"><label>Delivery fee (₦)</label><input class="input" type="number" id="setDeliveryFee" /></div>
+          <div class="input-group"><label>Minimum order (₦)</label><input class="input" type="number" id="setMinOrder" /></div>
+          <div class="input-group"><label>Estimated delivery time (minutes)</label><input class="input" type="number" id="setETA" /></div>
+          <button class="btn btn-primary" style="margin-top:8px" onclick="saveSettings()">Save Changes</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ADD/EDIT MENU ITEM MODAL -->
+<div class="modal-overlay" id="menuModal">
+  <div class="modal" style="border-radius:var(--radius)">
+    <div class="modal-handle"></div>
+    <h3 class="font-display" style="margin-bottom:24px" id="modalTitle">Add Menu Item</h3>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="input-group"><label>Item name</label><input class="input" type="text" id="itemName" placeholder="Jollof Rice" /></div>
+      <div class="input-group"><label>Description</label><input class="input" type="text" id="itemDesc" placeholder="Smoky party jollof with chicken" /></div>
+      <div class="input-group"><label>Price (₦)</label><input class="input" type="number" id="itemPrice" placeholder="2500" /></div>
+      <div class="input-group"><label>Category</label><input class="input" type="text" id="itemCategory" placeholder="Rice Dishes" /></div>
+      <div class="input-group">
+        <label>Food Image (optional)</label>
+        <input class="input" type="file" id="itemImage" accept="image/*" style="padding:10px;cursor:pointer" />
+        <div id="imagePreview" style="margin-top:8px;display:none">
+          <img id="previewImg" style="width:100%;height:140px;object-fit:cover;border-radius:10px;" />
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:8px">
+        <button class="btn btn-outline btn-full" onclick="closeMenuModal()">Cancel</button>
+        <button class="btn btn-primary btn-full" onclick="saveMenuItem()" id="saveItemBtn">Add Item</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NEW ORDER SOUND ALERT -->
+<div class="new-order-alert" id="newOrderAlert" style="display:none">
+  <div class="new-order-inner">
+    <div class="new-order-icon">🔔</div>
+    <div>
+      <div class="new-order-title">New Order!</div>
+      <div class="new-order-sub" id="newOrderSub"></div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="document.getElementById('newOrderAlert').style.display='none';showTab('orders')">View</button>
+  </div>
+</div>
+
+<script src="../shared/api.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>
